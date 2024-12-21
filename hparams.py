@@ -7,13 +7,12 @@ class HParams:
         self.__dict__.update(kwargs)
 
 def create_hparams(hparams_string=None, verbose=False):
-    """Create model hyperparameters. Parse nondefault from given string."""
     hparams = HParams(
         ################################
         # Experiment Parameters        #
         ################################
-        epochs=500,
-        iters_per_checkpoint=1000,
+        epochs=100,
+        iters_per_checkpoint=200,
         seed=1234,
         dynamic_loss_scaling=True,
         fp16_run=False,
@@ -27,7 +26,7 @@ def create_hparams(hparams_string=None, verbose=False):
         ################################
         # Data Parameters             #
         ################################
-        load_mel_from_disk=False,
+        load_mel_from_disk=True,
         training_files='/content/filelist.txt',
         validation_files='/content/filelist.txt',
         text_cleaners=['english_cleaners'],
@@ -52,7 +51,7 @@ def create_hparams(hparams_string=None, verbose=False):
 
         # Encoder parameters
         encoder_kernel_size=5,
-        encoder_n_convolutions=3,
+        encoder_n_convolutions=2,  # Reduce convolutions
         encoder_embedding_dim=512,
 
         # Decoder parameters
@@ -61,8 +60,8 @@ def create_hparams(hparams_string=None, verbose=False):
         prenet_dim=256,
         max_decoder_steps=1000,
         gate_threshold=0.5,
-        p_attention_dropout=0.1,
-        p_decoder_dropout=0.1,
+        p_attention_dropout=0.2,  # Increase dropout
+        p_decoder_dropout=0.2,  # Increase dropout
 
         # Attention parameters
         attention_rnn_dim=1024,
@@ -81,10 +80,11 @@ def create_hparams(hparams_string=None, verbose=False):
         # Optimization Hyperparameters #
         ################################
         use_saved_learning_rate=False,
-        learning_rate=1e-3,
+        learning_rate=1e-4,  # Lower learning rate
         weight_decay=1e-6,
-        grad_clip_thresh=1.0,
-        batch_size=64,
+        grad_clip_thresh=0.5,  # Lower grad clip threshold
+        batch_size=16,  # Smaller batch size for small dataset
         mask_padding=True  # set model's padded outputs to padded values
     )
     return hparams
+
