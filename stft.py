@@ -30,15 +30,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import torch
-import numpy as np
-import torch.nn.functional as F
-from torch.autograd import Variable
-from scipy.signal import get_window
-from librosa.util import pad_center, tiny
-from audio_processing import window_sumsquare
-
-
 class STFT(torch.nn.Module):
     """adapted from Prem Seetharaman's https://github.com/pseeth/pytorch-stft"""
     def __init__(self, filter_length=800, hop_length=200, win_length=800,
@@ -62,9 +53,9 @@ class STFT(torch.nn.Module):
 
         if window is not None:
             assert(filter_length >= win_length)
-            # get window and zero center pad it to filter_length
+            # get window and zero-center pad it to filter_length
             fft_window = get_window(window, win_length, fftbins=True)
-            fft_window = pad_center(fft_window, filter_length)
+            fft_window = pad_center(fft_window, size=filter_length)  # Ensure size is passed correctly
             fft_window = torch.from_numpy(fft_window).float()
 
             # window the bases
@@ -80,12 +71,12 @@ class STFT(torch.nn.Module):
 
         self.num_samples = num_samples
 
-        # similar to librosa, reflect-pad the input
+        # Apply zero padding instead of reflect padding
         input_data = input_data.view(num_batches, 1, num_samples)
         input_data = F.pad(
             input_data.unsqueeze(1),
             (int(self.filter_length / 2), int(self.filter_length / 2), 0, 0),
-            mode='reflect')
+            mode='constant')  # Zero padding to avoid mirroring
         input_data = input_data.squeeze(1)
 
         forward_transform = F.conv1d(
@@ -106,7 +97,7 @@ class STFT(torch.nn.Module):
 
     def inverse(self, magnitude, phase):
         recombine_magnitude_phase = torch.cat(
-            [magnitude*torch.cos(phase), magnitude*torch.sin(phase)], dim=1)
+            [magnitude * torch.cos(phase), magnitude * torch.sin(phase)], dim=1)
 
         inverse_transform = F.conv_transpose1d(
             recombine_magnitude_phase,
@@ -119,7 +110,7 @@ class STFT(torch.nn.Module):
                 self.window, magnitude.size(-1), hop_length=self.hop_length,
                 win_length=self.win_length, n_fft=self.filter_length,
                 dtype=np.float32)
-            # remove modulation effects
+            # Remove modulation effects
             approx_nonzero_indices = torch.from_numpy(
                 np.where(window_sum > tiny(window_sum))[0])
             window_sum = torch.autograd.Variable(
@@ -127,7 +118,7 @@ class STFT(torch.nn.Module):
             window_sum = window_sum.cuda() if magnitude.is_cuda else window_sum
             inverse_transform[:, :, approx_nonzero_indices] /= window_sum[approx_nonzero_indices]
 
-            # scale by hop ratio
+            # Scale by hop ratio
             inverse_transform *= float(self.filter_length) / self.hop_length
 
         inverse_transform = inverse_transform[:, :, int(self.filter_length/2):]
