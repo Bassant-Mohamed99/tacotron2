@@ -21,7 +21,7 @@ def prepare_dataloaders(hparams):
     valset = TextMelLoader(hparams.validation_files, hparams)
     collate_fn = TextMelCollate(hparams.n_frames_per_step)
 
-    train_loader = DataLoader(trainset, num_workers=1, shuffle=True,
+    train_loader = DataLoader(trainset, num_workers=0, shuffle=True,
                               batch_size=hparams.batch_size, pin_memory=False,
                               drop_last=True, collate_fn=collate_fn)
     return train_loader, valset, collate_fn
