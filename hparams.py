@@ -5,7 +5,7 @@ from text import symbols
 def create_hparams(hparams_string=None, verbose=False):
     """Create model hyperparameters. Parse nondefault from given string."""
 
-    hparams = HParams(
+    hparams =  tf.contrib.training.HParams(
         ################################
         # Experiment Parameters        #
         ################################
