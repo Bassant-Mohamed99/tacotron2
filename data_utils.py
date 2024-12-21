@@ -41,7 +41,6 @@ class TextMelLoader(torch.utils.data.Dataset):
             audio, sampling_rate = load_wav_to_torch(filename)
             if sampling_rate != self.stft.sampling_rate:
                 print(f"Resampling {filename} from {sampling_rate} Hz to {self.stft.sampling_rate} Hz")
-                import torchaudio
                 audio = torchaudio.transforms.Resample(
                     orig_freq=sampling_rate, new_freq=self.stft.sampling_rate)(audio.unsqueeze(0)).squeeze(0)
 
@@ -51,11 +50,16 @@ class TextMelLoader(torch.utils.data.Dataset):
             melspec = self.stft.mel_spectrogram(audio_norm)
             melspec = torch.squeeze(melspec, 0)
         else:
-            melspec = torch.from_numpy(np.load(filename, allow_pickle=True))
+            try:
+                melspec = torch.from_numpy(np.load(filename, allow_pickle=True))
+            except Exception as e:
+                raise ValueError(f"Error loading Mel spectrogram from {filename}: {e}")
+            
             if melspec.size(0) != self.stft.n_mel_channels:
                 raise ValueError(
                     f"Mel dimension mismatch in file {filename}: "
-                    f"found {melspec.size(0)}, expected {self.stft.n_mel_channels}")
+                    f"found {melspec.size(0)}, expected {self.stft.n_mel_channels}"
+                )
 
         return melspec
 
@@ -71,7 +75,7 @@ class TextMelLoader(torch.utils.data.Dataset):
 
 
 class TextMelCollate():
-    """ Zero-pads model inputs and targets based on number of frames per setep
+    """ Zero-pads model inputs and targets based on number of frames per step
     """
     def __init__(self, n_frames_per_step):
         self.n_frames_per_step = n_frames_per_step
