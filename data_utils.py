@@ -38,8 +38,11 @@ class TextMelLoader(torch.utils.data.Dataset):
         if not self.load_mel_from_disk:
             audio, sampling_rate = load_wav_to_torch(filename)
             if sampling_rate != self.stft.sampling_rate:
-                raise ValueError("{} {} SR doesn't match target {} SR".format(
-                    sampling_rate, self.stft.sampling_rate))
+                print(f"Resampling {filename} from {sampling_rate} Hz to {self.stft.sampling_rate} Hz")
+                import torchaudio
+                audio = torchaudio.transforms.Resample(
+                    orig_freq=sampling_rate, new_freq=self.stft.sampling_rate)(audio.unsqueeze(0)).squeeze(0)
+
             audio_norm = audio / self.max_wav_value
             audio_norm = audio_norm.unsqueeze(0)
             audio_norm = torch.autograd.Variable(audio_norm, requires_grad=False)
@@ -47,9 +50,10 @@ class TextMelLoader(torch.utils.data.Dataset):
             melspec = torch.squeeze(melspec, 0)
         else:
             melspec = torch.from_numpy(np.load(filename))
-            assert melspec.size(0) == self.stft.n_mel_channels, (
-                'Mel dimension mismatch: given {}, expected {}'.format(
-                    melspec.size(0), self.stft.n_mel_channels))
+            if melspec.size(0) != self.stft.n_mel_channels:
+                raise ValueError(
+                    f"Mel dimension mismatch in file {filename}: "
+                    f"found {melspec.size(0)}, expected {self.stft.n_mel_channels}")
 
         return melspec
 
@@ -109,3 +113,4 @@ class TextMelCollate():
 
         return text_padded, input_lengths, mel_padded, gate_padded, \
             output_lengths
+
